@@ -2,6 +2,7 @@
 import '../styles/global.css';
 import ParticleBackground from '../components/ParticleBackground';
 import ThemeToggle from '../components/ThemeToggle';
+import CloudflareAnalytics from '../components/CloudflareAnalytics.astro';
 
 interface Props {
 	title: string;
@@ -98,6 +99,7 @@ const socialImageURL = new URL(image, Astro.url.origin).href;
 			</div>
 			<slot />
 		</div>
+		<CloudflareAnalytics />
 	</body>
 </html>
 

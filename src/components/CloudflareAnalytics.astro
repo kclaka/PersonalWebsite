@@ -1,0 +1,16 @@
+---
+// You'll get this token from Cloudflare Dashboard
+const analyticsToken = import.meta.env.PUBLIC_CLOUDFLARE_ANALYTICS_TOKEN;
+---
+
+<!-- Cloudflare Web Analytics -->
+{
+    analyticsToken && (
+        <script
+            defer
+            src='https://static.cloudflareinsights.com/beacon.min.js'
+            data-cf-beacon={`{"token": "${analyticsToken}"}`}
+        ></script>
+    )
+}
+<!-- End Cloudflare Web Analytics -->
