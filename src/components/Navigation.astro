@@ -1,0 +1,29 @@
+---
+const navItems = [
+  { name: 'Home', url: '/' },
+  { name: 'Blog', url: '/blog' },
+  { name: 'Contact', url: '/contact' },
+];
+---
+
+<nav class="fixed w-full bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm z-50">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between h-16">
+      <div class="flex items-center">
+        <a href="/" class="text-lg font-semibold hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">
+          KI
+        </a>
+      </div>
+      <div class="flex items-center space-x-8">
+        {navItems.map((item) => (
+          <a
+            href={item.url}
+            class="text-sm font-medium hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+          >
+            {item.name}
+          </a>
+        ))}
+      </div>
+    </div>
+  </div>
+</nav>

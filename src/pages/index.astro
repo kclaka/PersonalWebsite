@@ -1,11 +1,159 @@
 ---
-import Welcome from '../components/Welcome.astro';
 import Layout from '../layouts/Layout.astro';
+import Navigation from '../components/Navigation.astro';
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
 ---
 
-<Layout>
-	<Welcome />
+<Layout title="Kenny Igbechi - Software Engineer">
+	<Navigation />
+	<main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-32">
+		<section class="space-y-8">
+			<div class="flex flex-col-reverse md:flex-row md:items-center md:justify-between md:space-x-8">
+				<div class="space-y-4 mt-6 md:mt-0">
+					<h1 class="text-4xl font-bold tracking-tight sm:text-5xl">
+						Software Engineer
+					</h1>
+					<p class="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl">
+						A seasoned engineer with 5+ years of experience crafting scalable solutions at industry-leading technology companies. Specialized in building high-performance distributed systems and data platforms that serve millions of users.
+					</p>
+					<p class="text-base text-zinc-600 dark:text-zinc-400 max-w-2xl">
+						Currently focused on developing innovative solutions in data engineering, machine learning, and large-scale system architecture for Fortune 500 enterprises.
+					</p>
+				</div>
+				<div class="relative">
+					<div class="w-48 h-48 rounded-full overflow-hidden border-4 border-purple-500/10 dark:border-purple-400/10 shadow-xl">
+						<img
+							src="/profile.jpg"
+							alt="Kenny Igbechi"
+							class="w-full h-full object-cover"
+							style="opacity: 0"
+							onload="this.style.opacity = 1"
+						/>
+					</div>
+					<div class="absolute -inset-0.5 bg-gradient-to-r from-purple-500 to-purple-600 opacity-10 blur rounded-full">
+					</div>
+				</div>
+			</div>
+
+			<div class="flex items-center space-x-6">
+				<a 
+					href="https://github.com/kclaka" 
+					target="_blank"
+					rel="noopener noreferrer"
+					class="group inline-flex items-center space-x-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+				>
+					<svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+						<path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+					</svg>
+					<span>GitHub</span>
+				</a>
+				<a 
+					href="/contact" 
+					class="group inline-flex items-center space-x-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+				>
+					<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V7a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+					</svg>
+					<span>Resume available upon request</span>
+				</a>
+			</div>
+		</section>
+
+		<section class="mt-24 space-y-8">
+			<h2 class="text-2xl font-bold tracking-tight">Technical Expertise</h2>
+			<div class="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
+				<div class="group rounded-lg border border-zinc-200 dark:border-zinc-800 p-6 transition-all hover:border-purple-500 dark:hover:border-purple-400">
+					<h3 class="font-semibold flex items-center space-x-2">
+						<svg class="h-5 w-5 text-purple-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+						</svg>
+						<span>Data Engineering</span>
+					</h3>
+					<ul class="mt-4 space-y-3 text-sm text-zinc-600 dark:text-zinc-400">
+						<li class="flex items-baseline space-x-2">
+							<span class="text-purple-500">•</span>
+							<span>Built data pipelines processing <span class="font-medium text-zinc-900 dark:text-zinc-200">50K+ concurrent requests</span></span>
+						</li>
+						<li class="flex items-baseline space-x-2">
+							<span class="text-purple-500">•</span>
+							<span>Achieved <span class="font-medium text-zinc-900 dark:text-zinc-200">99.9% uptime</span> for critical data services</span>
+						</li>
+						<li class="flex items-baseline space-x-2">
+							<span class="text-purple-500">•</span>
+							<span>Reduced engineering hours by <span class="font-medium text-zinc-900 dark:text-zinc-200">25%</span> through automation</span>
+						</li>
+					</ul>
+				</div>
+
+				<div class="group rounded-lg border border-zinc-200 dark:border-zinc-800 p-6 transition-all hover:border-purple-500 dark:hover:border-purple-400">
+					<h3 class="font-semibold flex items-center space-x-2">
+						<svg class="h-5 w-5 text-purple-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+						</svg>
+						<span>Machine Learning</span>
+					</h3>
+					<ul class="mt-4 space-y-3 text-sm text-zinc-600 dark:text-zinc-400">
+						<li class="flex items-baseline space-x-2">
+							<span class="text-purple-500">•</span>
+							<span>Developed models with <span class="font-medium text-zinc-900 dark:text-zinc-200">95%+ accuracy</span> in production</span>
+						</li>
+						<li class="flex items-baseline space-x-2">
+							<span class="text-purple-500">•</span>
+							<span>Led <span class="font-medium text-zinc-900 dark:text-zinc-200">10+ engineers</span> in ML implementation</span>
+						</li>
+						<li class="flex items-baseline space-x-2">
+							<span class="text-purple-500">•</span>
+							<span>Published research on network simulation optimization</span>
+						</li>
+					</ul>
+				</div>
+
+				<div class="group rounded-lg border border-zinc-200 dark:border-zinc-800 p-6 transition-all hover:border-purple-500 dark:hover:border-purple-400">
+					<h3 class="font-semibold flex items-center space-x-2">
+						<svg class="h-5 w-5 text-purple-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+						</svg>
+						<span>System Architecture</span>
+					</h3>
+					<ul class="mt-4 space-y-3 text-sm text-zinc-600 dark:text-zinc-400">
+						<li class="flex items-baseline space-x-2">
+							<span class="text-purple-500">•</span>
+							<span>Designed solutions for <span class="font-medium text-zinc-900 dark:text-zinc-200">Fortune 500</span> companies</span>
+						</li>
+						<li class="flex items-baseline space-x-2">
+							<span class="text-purple-500">•</span>
+							<span>Improved project efficiency by <span class="font-medium text-zinc-900 dark:text-zinc-200">60%</span></span>
+						</li>
+						<li class="flex items-baseline space-x-2">
+							<span class="text-purple-500">•</span>
+							<span>Implemented comprehensive training programs</span>
+						</li>
+					</ul>
+				</div>
+
+				<div class="group rounded-lg border border-zinc-200 dark:border-zinc-800 p-6 transition-all hover:border-purple-500 dark:hover:border-purple-400">
+					<h3 class="font-semibold flex items-center space-x-2">
+						<svg class="h-5 w-5 text-purple-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+						</svg>
+						<span>Full Stack Development</span>
+					</h3>
+					<ul class="mt-4 space-y-3 text-sm text-zinc-600 dark:text-zinc-400">
+						<li class="flex items-baseline space-x-2">
+							<span class="text-purple-500">•</span>
+							<span>Built end-to-end solutions with <span class="font-medium text-zinc-900 dark:text-zinc-200">99%</span> migration accuracy</span>
+						</li>
+						<li class="flex items-baseline space-x-2">
+							<span class="text-purple-500">•</span>
+							<span>Automated workflows saving <span class="font-medium text-zinc-900 dark:text-zinc-200">50+</span> engineering hours</span>
+						</li>
+						<li class="flex items-baseline space-x-2">
+							<span class="text-purple-500">•</span>
+							<span>Developed bootcamp curriculum with high success rates</span>
+						</li>
+					</ul>
+				</div>
+			</div>
+		</section>
+	</main>
 </Layout>

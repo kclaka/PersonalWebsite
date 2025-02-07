@@ -1,0 +1,102 @@
+---
+import Layout from './Layout.astro';
+import Navigation from '../components/Navigation.astro';
+import Comments from '../components/Comments.astro';
+import { format } from 'date-fns';
+import type { CollectionEntry } from 'astro:content';
+
+type Props = CollectionEntry<'blog'>['data'] & {
+	slug: string;
+};
+
+const { title, description, pubDate, updatedDate, heroImage, slug } = Astro.props;
+---
+
+<Layout title={title} description={description}>
+	<Navigation />
+	<article class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+		<div class="prose prose-purple dark:prose-invert mx-auto">
+			<header class="mb-12">
+				<h1 class="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
+					{title}
+				</h1>
+				{heroImage && (
+					<img
+						src={heroImage}
+						alt={`Hero image for ${title}`}
+						class="rounded-xl shadow-md mb-8 w-full"
+					/>
+				)}
+				<div class="flex items-center text-sm text-zinc-600 dark:text-zinc-400">
+					<time datetime={pubDate.toISOString()}>
+						{format(pubDate, 'MMMM d, yyyy')}
+					</time>
+					{updatedDate && (
+						<>
+							<span class="mx-2">•</span>
+							<span>Updated on {format(updatedDate, 'MMMM d, yyyy')}</span>
+						</>
+					)}
+				</div>
+			</header>
+
+			<div class="mt-8">
+				<slot />
+			</div>
+
+			<footer class="mt-16 pt-8 border-t border-zinc-200 dark:border-zinc-800">
+				<a
+					href="/blog"
+					class="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 transition-colors"
+				>
+					← Back to Blog
+				</a>
+			</footer>
+
+			<Comments />
+		</div>
+	</article>
+</Layout>
+
+<style>
+	/* Add Tailwind Typography styles */
+	.prose {
+		max-width: 65ch;
+	}
+	.prose :global(pre) {
+		background-color: #1a1b26;
+		border-radius: 0.5rem;
+		padding: 1rem;
+		margin: 1.5rem 0;
+		overflow-x: auto;
+	}
+	.prose :global(code) {
+		color: #7c3aed;
+		background-color: #f3f4f6;
+		padding: 0.2rem 0.4rem;
+		border-radius: 0.25rem;
+		font-size: 0.875em;
+	}
+	.dark .prose :global(code) {
+		background-color: #374151;
+		color: #a78bfa;
+	}
+	.prose :global(pre code) {
+		color: inherit;
+		background-color: transparent;
+		padding: 0;
+	}
+	.prose :global(img) {
+		border-radius: 0.5rem;
+	}
+	.prose :global(a) {
+		color: #7c3aed;
+		text-decoration: none;
+	}
+	.dark .prose :global(a) {
+		color: #a78bfa;
+	}
+	.prose :global(a:hover) {
+		text-decoration: underline;
+	}
+</style>
