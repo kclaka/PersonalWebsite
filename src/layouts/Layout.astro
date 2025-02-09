@@ -2,7 +2,6 @@
 import '../styles/global.css';
 import ParticleBackground from '../components/ParticleBackground';
 import ThemeToggle from '../components/ThemeToggle';
-import CloudflareAnalytics from '../components/CloudflareAnalytics.astro';
 
 interface Props {
 	title: string;
@@ -76,30 +75,16 @@ const socialImageURL = new URL(image, Astro.url.origin).href;
 
 		<!-- Theme Script -->
 		<script is:inline>
-			const theme = (() => {
-				if (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) {
-					return localStorage.getItem('theme');
-				}
-				return 'dark'; // Default to dark theme
-			})();
-			
-			if (theme === 'light') {
-				document.documentElement.classList.remove('dark');
-			} else {
-				document.documentElement.classList.add('dark');
-			}
-			window.localStorage.setItem('theme', theme);
+			const theme = localStorage.getItem('theme') || 'dark';
+			document.documentElement.classList[theme === 'dark' ? 'add' : 'remove']('dark');
 		</script>
 	</head>
 	<body class="bg-zinc-50 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-50">
 		<ParticleBackground client:load />
+		<ThemeToggle client:load />
 		<div class="min-h-screen backdrop-blur-[2px]">
-			<div class="fixed top-4 right-4 z-50">
-				<ThemeToggle client:load />
-			</div>
 			<slot />
 		</div>
-		<CloudflareAnalytics />
 	</body>
 </html>
 
