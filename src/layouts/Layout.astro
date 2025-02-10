@@ -61,18 +61,33 @@ const socialImageURL = new URL(image, Astro.url.origin).href;
 		<meta name="keywords" content="Kenny Igbechi, Software Engineer, Full Stack Developer, Distributed Systems, Tech Lead, Engineering" />
 		
 		<!-- JSON-LD for Rich Snippets -->
-		<script type="application/ld+json">
-			{
-				"@context": "https://schema.org",
-				"@type": "Person",
-				"name": "Kenny Igbechi",
-				"url": {Astro.url.origin},
-				"sameAs": [],
-				"jobTitle": "Software Engineer",
-				"description": {description}
-			}
-		</script>
-
+		<script type="application/ld+json" set:html={JSON.stringify({
+			"@context": "https://schema.org",
+			"@type": "Person",
+			"name": "Kenny Igbechi",
+			"url": Astro.url.origin,
+			"sameAs": [
+				"https://github.com/kclaka",
+				"https://x.com/kennyclaka"
+			],
+			"jobTitle": "Senior Software Engineer",
+			"description": description,
+			"image": socialImageURL,
+			"email": "hello@kennyigbechi.com",
+			"alumniOf": {
+				"@type": "CollegeOrUniversity",
+				"name": "University of Houston"
+			},
+			"knowsAbout": [
+				"Cloud Computing",
+				"Azure",
+				"AWS",
+				"Software Engineering",
+				"Distributed Systems",
+				"Full Stack Development"
+			]
+		})} />
+		
 		<!-- Theme Script -->
 		<script is:inline>
 			const theme = localStorage.getItem('theme') || 'dark';

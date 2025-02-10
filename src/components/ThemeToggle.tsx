@@ -2,18 +2,21 @@
 
 import { useEffect, useState } from 'react';
 
-export default function ThemeToggle() {
+function ThemeToggle() {
   const [mounted, setMounted] = useState(false);
-  const [theme, setTheme] = useState('dark');
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('theme') || 'dark';
+    }
+    return 'dark';
+  });
 
   useEffect(() => {
     setMounted(true);
-    const savedTheme = localStorage.getItem('theme') || 'dark';
-    setTheme(savedTheme);
   }, []);
 
   useEffect(() => {
-    if (!mounted) return;
+    if (typeof window === 'undefined') return;
     
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
@@ -21,16 +24,21 @@ export default function ThemeToggle() {
       document.documentElement.classList.remove('dark');
     }
     localStorage.setItem('theme', theme);
-  }, [theme, mounted]);
+  }, [theme]);
 
-  if (!mounted) return null;
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <button
       onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
       className="fixed top-4 right-4 z-50 rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
+      aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
     >
       {theme === 'dark' ? '🌞' : '🌙'}
     </button>
   );
 }
+
+export default ThemeToggle;
