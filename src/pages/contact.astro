@@ -4,43 +4,42 @@ import Navigation from '../components/Navigation.astro';
 ---
 
 <Layout title="Contact - Kenny Igbechi">
-	<div class="relative min-h-screen">
-		<Navigation />
-		<main class="absolute inset-0 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 pt-16">
-			<div class="w-full max-w-lg space-y-8">
-				<div class="text-center">
-					<div class="inline-flex items-center space-x-2 text-sm font-medium text-zinc-500 dark:text-zinc-400">
-						<span>Currently</span>
-						<span id="localTime" class="font-mono"></span>
-						<span>in Seattle</span>
+	<Navigation />
+	<main class="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8">
+		<div class="w-full max-w-lg space-y-8">
+			<div class="text-center">
+				<div class="inline-flex items-center space-x-2 text-sm font-medium text-zinc-500 dark:text-zinc-400">
+					<span>Currently</span>
+					<span id="localTime" class="font-mono"></span>
+					<span>in Seattle</span>
+				</div>
+			</div>
+
+			<button
+				id="email-btn"
+				type="button"
+				class="group block w-full text-left overflow-hidden rounded-2xl bg-zinc-50 dark:bg-zinc-800/50 p-8 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 relative cursor-pointer"
+			>
+				<div class="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+				<div class="relative space-y-4">
+					<div class="flex items-center justify-between">
+						<svg class="h-8 w-8 text-purple-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+						</svg>
+						<div id="copyStatus" class="text-sm text-zinc-500 dark:text-zinc-400">
+							Click to reveal
+						</div>
+					</div>
+					<div class="pt-2 flex items-center text-purple-500 group-hover:text-purple-600">
+						<span id="emailDisplay" class="text-base font-medium">Click to reveal email</span>
+						<svg class="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+							<path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+						</svg>
 					</div>
 				</div>
-
-				<a 
-					href="#"
-					class="group block overflow-hidden rounded-2xl bg-zinc-50 dark:bg-zinc-800/50 p-8 transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
-				>
-					<div class="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-					<div class="relative space-y-4">
-						<div class="flex items-center justify-between">
-							<svg class="h-8 w-8 text-purple-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-								<path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-							</svg>
-							<div class="text-sm text-zinc-500 dark:text-zinc-400">
-								Click to copy
-							</div>
-						</div>
-						<div class="pt-2 flex items-center text-purple-500 group-hover:text-purple-600">
-							<span id="emailDisplay" class="text-base font-medium">Click to reveal email</span>
-							<svg class="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" viewBox="0 0 20 20" fill="currentColor">
-								<path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
-							</svg>
-						</div>
-					</div>
-				</a>
-			</div>
-		</main>
-	</div>
+			</button>
+		</div>
+	</main>
 </Layout>
 
 <script>
@@ -71,32 +70,36 @@ import Navigation from '../components/Navigation.astro';
 
 	// Update time immediately and then every minute
 	updateTime();
-	setInterval(updateTime, 60000);
+	const timerId = setInterval(updateTime, 60000);
+	document.addEventListener('astro:before-swap', () => clearInterval(timerId));
 
 	// Email reveal and copy functionality
-	const emailElement = document.querySelector('a[href="#"]');
+	const emailBtn = document.getElementById('email-btn');
 	const emailDisplay = document.getElementById('emailDisplay');
+	const copyStatus = document.getElementById('copyStatus');
 	let isRevealed = false;
 
-	if (emailElement && emailDisplay) {
-		emailElement.addEventListener('click', (e) => {
-			e.preventDefault();
+	if (emailBtn && emailDisplay) {
+		emailBtn.addEventListener('click', () => {
 			const email = getEmail();
-			
+
 			if (!isRevealed) {
 				emailDisplay.textContent = email;
+				if (copyStatus) copyStatus.textContent = 'Click to copy';
 				isRevealed = true;
 				return;
 			}
 
 			navigator.clipboard.writeText(email).then(() => {
-				const clickToCopy = emailElement.querySelector('.text-zinc-500');
-				if (clickToCopy) {
-					clickToCopy.textContent = 'Copied!';
+				if (copyStatus) {
+					copyStatus.textContent = 'Copied!';
 					setTimeout(() => {
-						clickToCopy.textContent = 'Click to copy';
+						copyStatus.textContent = 'Click to copy';
 					}, 2000);
 				}
+			}).catch(() => {
+				// Fallback: select text for manual copy
+				if (copyStatus) copyStatus.textContent = 'Press Ctrl+C to copy';
 			});
 		});
 	}
