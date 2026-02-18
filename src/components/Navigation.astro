@@ -1,29 +1,13 @@
 ---
-const navItems = [
-  { name: 'Home', url: '/' },
-  { name: 'Blog', url: '/blog' },
-  { name: 'Contact', url: '/contact' },
-];
+import ThemeToggle from './ThemeToggle.astro';
 ---
 
-<nav class="fixed w-full bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm z-50">
-  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="flex justify-between h-16">
-      <div class="flex items-center">
-        <a href="/" class="text-lg font-semibold hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">
-          KI
-        </a>
-      </div>
-      <div class="flex items-center space-x-8">
-        {navItems.map((item) => (
-          <a
-            href={item.url}
-            class="text-sm font-medium hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
-          >
-            {item.name}
-          </a>
-        ))}
-      </div>
+<nav class="max-w-2xl mx-auto px-4 sm:px-6 py-6">
+  <div class="flex items-center justify-between">
+    <div class="flex items-center space-x-6">
+      <a href="/" class="text-sm font-medium text-zinc-900 dark:text-zinc-100">Kenny Igbechi</a>
+      <a href="/blog" class="text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100">blog</a>
     </div>
+    <ThemeToggle />
   </div>
 </nav>
