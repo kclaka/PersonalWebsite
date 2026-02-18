@@ -1,78 +1,69 @@
 ---
-title: 'I Built a Caching Reverse Proxy That Beats Redis''s Eviction Strategy — Here''s How'
+title: 'I Built a Caching Reverse Proxy That Beats Redis''s Eviction Strategy'
 description: 'How I built Colander, a production-grade HTTP caching reverse proxy in Rust that replaces LRU with the SIEVE eviction algorithm for lock-free cache hits and near-linear multi-thread scaling.'
 pubDate: 2026-02-17
 tags: ['rust', 'caching', 'systems', 'performance']
 ---
 
-# I Built a Caching Reverse Proxy That Beats Redis's Eviction Strategy — Here's How
-
 Every production system I've worked on has had the same bottleneck hiding in plain sight: the cache's eviction policy.
 
 LRU (Least Recently Used) is the default everywhere. Redis uses it. Memcached uses it. CDNs use it. It's the answer on every systems design interview whiteboard. And it has a fundamental scaling problem that most engineers never think about.
 
-Every single cache hit requires a write lock.
+**Every single cache hit requires a write lock.**
 
-When you look up a key in an LRU cache, the item gets moved to the front of a linked list. That's a pointer mutation — which means you need exclusive access. Under high concurrency, every thread hitting the cache is fighting for the same lock. Your cache — the thing you built to make your system fast — becomes the contention point.
+When you look up a key in an LRU cache, the item gets moved to the front of a linked list. That's a pointer mutation, which means you need exclusive access. Under high concurrency, every thread hitting the cache is fighting for the same lock. Your cache, the thing you built to make your system *fast*, becomes the contention point.
 
 I built [Colander](https://github.com/kclaka/colander) to fix this. It's a production-grade HTTP caching reverse proxy in Rust that replaces LRU with the SIEVE eviction algorithm, published at [NSDI '24](https://www.usenix.org/conference/nsdi24/presentation/zhang-yazhuo). The result: lock-free cache hits, near-linear multi-thread scaling, and lower miss ratios than nine state-of-the-art algorithms on real-world traces.
 
-This post covers why SIEVE works, the architecture decisions I made building Colander, and what I learned about writing production infrastructure in Rust.
+This post covers why SIEVE works, the architecture decisions behind Colander, and what I learned writing production infrastructure in Rust.
 
 ---
 
 ## The Problem With LRU
 
-LRU's appeal is intuitive: keep recently used items, evict the oldest. It works well enough at low concurrency. The problem emerges at scale.
+LRU's appeal is intuitive: keep recently used items, evict the oldest. It works well enough at low concurrency. The problem shows up at scale.
 
 Here's what happens inside an LRU cache on every hit:
 
 ```
 Thread A reads key "user:42"
-  → Acquire write lock on the linked list
-  → Unlink node from current position
-  → Relink node at head
-  → Release write lock
+  -> Acquire write lock on the linked list
+  -> Unlink node from current position
+  -> Relink node at head
+  -> Release write lock
 
 Thread B reads key "session:abc"
-  → BLOCKED — waiting for Thread A's write lock
-  → ...
-  → ...
-  → Finally acquires lock, does the same move-to-front
+  -> BLOCKED, waiting for Thread A's write lock
+  -> ...
+  -> ...
+  -> Finally acquires lock, does the same move-to-front
 ```
 
-At 16 threads, this serialization kills throughput. The NSDI '24 paper benchmarked an optimized LRU implementation and found it plateaus around 4 threads. SIEVE, by contrast, scales nearly linearly to 16+ threads — roughly 2x the throughput of LRU under contention.
+At 16 threads, this serialization kills throughput. The NSDI '24 paper benchmarked an optimized LRU implementation and found it plateaus around 4 threads. SIEVE scales nearly linearly to 16+ threads, roughly 2x the throughput of LRU under contention.
 
-The irony is stark: the more popular your cache (more hits), the worse LRU performs (more lock contention on hits).
+The irony: the more popular your cache (more hits), the worse LRU performs (more lock contention on hits).
 
 ## How SIEVE Works
 
 SIEVE is deceptively simple. The entire algorithm is about 50 lines of code. Here's the core idea:
 
-**On a cache hit**: flip a single boolean. That's it. No list mutation. No write lock needed.
+**On a cache hit:** flip a single boolean. That's it. No list mutation. No write lock needed.
 
 ```rust
-/// SIEVE: just flip the visited bit. No list mutation!
+// SIEVE: just flip the visited bit. No list mutation!
 node.mark_visited();  // AtomicBool::store(true, Relaxed)
 ```
 
-**On eviction**: a "hand" pointer walks from the tail of the list toward the head, looking for items to evict. If it encounters a visited item, it clears the bit and moves on (the item is "retained in place"). If it finds an unvisited item, it evicts it.
+**On eviction:** a "hand" pointer walks from the tail of the list toward the head, looking for items to evict. If it hits a visited item, it clears the bit and moves on (the item stays). If it finds an unvisited item, it evicts it.
 
-```
-List: head → [D] → [C*] → [B] → [A*] → tail
-                                    ↑ hand starts here
+<figure>
+  <img src="https://cachemon.github.io/SIEVE-website/assets/images/illustrations/sieve_diagram.gif" alt="SIEVE eviction algorithm diagram showing the hand pointer scanning through cache entries" />
+  <figcaption style="text-align: center; font-size: 0.85rem; color: #71717a; margin-top: 0.5rem;">Source: <a href="https://cachemon.github.io/SIEVE-website/" target="_blank" rel="noopener noreferrer">SIEVE official website</a></figcaption>
+</figure>
 
-Scan:
-  A is visited → clear bit, keep A, move hand left
-  B is unvisited → EVICT B
+New items always insert at the head. Retained items stay in their original position. This creates a natural separation: new objects cluster near the head, and popular objects that survived eviction scans stay deeper in the list. The paper calls this "lazy promotion" and "quick demotion."
 
-After: head → [D] → [C*] → [A] → tail
-                       ↑ hand stops here for next eviction
-```
-
-New items always insert at the head. Retained items stay in their original position. This creates a natural separation: new objects cluster near the head, and popular objects that have survived eviction scans remain deeper in the list. The paper calls this "lazy promotion" and "quick demotion."
-
-The key insight is that popular items don't need to be moved to survive. They just need a one-bit flag that says "I was accessed recently." The eviction hand will skip them, clear the bit, and give them another chance. One-hit wonders — items accessed only once — sit unvisited and get evicted on the first scan.
+The key insight is that popular items don't need to be moved to survive. They just need a one-bit flag that says "I was accessed recently." The eviction hand skips them, clears the bit, and gives them another chance. One-hit wonders (items accessed only once) sit unvisited and get evicted on the first scan.
 
 This matters for web cache workloads, which follow [Zipfian distributions](https://en.wikipedia.org/wiki/Zipf%27s_law): a small number of items account for most requests. SIEVE's quick demotion of unpopular items and lazy retention of popular ones is a natural fit.
 
@@ -104,9 +95,9 @@ pub struct Node {
 
 All nodes live in a contiguous `Vec<Option<Node>>`. Instead of raw pointers (`*mut Node`), nodes reference each other via `u32` indices into the vector. A sentinel value (`u32::MAX`) serves as the null pointer.
 
-When a node is evicted, its slot is pushed onto a free-list for O(1) reuse — no allocator pressure, no fragmentation. The `Vec` layout gives us cache-line-friendly memory access patterns for free.
+When a node is evicted, its slot gets pushed onto a free-list for O(1) reuse. No allocator pressure, no fragmentation. The `Vec` layout gives us cache-line-friendly memory access patterns for free.
 
-The result: zero `unsafe` blocks in the entire cache library, while maintaining the same O(1) insert, remove, and move-to-head operations as a pointer-based implementation.
+The result: zero `unsafe` blocks in the entire cache library, with the same O(1) insert, remove, and move-to-head operations as a pointer-based implementation.
 
 ### 64-Shard Concurrency
 
@@ -122,15 +113,15 @@ fn shard_index(key: &str) -> usize {
 }
 ```
 
-Each shard has its own `parking_lot::RwLock`, its own arena, and its own eviction state. On a cache hit, only 1 of 64 shards is touched — and for SIEVE, even that touch is just a read lock (the visited bit is an `AtomicBool`).
+Each shard has its own `parking_lot::RwLock`, its own arena, and its own eviction state. On a cache hit, only 1 of 64 shards is touched, and for SIEVE, even that touch is just a read lock (the visited bit is an `AtomicBool`).
 
-I chose [`ahash`](https://crates.io/crates/ahash) over the standard library's hasher for two reasons: it's significantly faster for short keys (which most cache keys are), and its randomized seeds provide DoS resistance — you can't craft keys that all hash to the same shard.
+I chose [`ahash`](https://crates.io/crates/ahash) over the standard library's hasher for two reasons: it's significantly faster for short keys (which most cache keys are), and its randomized seeds provide DoS resistance so you can't craft keys that all hash to the same shard.
 
 The power-of-two shard count enables a bitmask modulo (`hash & 0x3F`) instead of the expensive `%` operator. Small optimization, but it's on the hot path.
 
 ### ArcSwap for Lock-Free Config Hot-Reload
 
-One of the more interesting problems was config hot-reload. Colander watches its `config.toml` at runtime and applies changes without restarting. But the cache layer is shared across every request handler and the RESP server — swapping it out safely requires careful coordination.
+One of the more interesting problems was config hot-reload. Colander watches its `config.toml` at runtime and applies changes without restarting. But the cache layer is shared across every request handler and the RESP server, so swapping it out safely requires careful coordination.
 
 I used [`ArcSwap`](https://docs.rs/arc-swap/) for the cache pointer:
 
@@ -142,17 +133,17 @@ pub struct AppState {
 }
 ```
 
-`ArcSwap` gives you lock-free reads (`load()` returns an `Arc` snapshot) and atomic writes (`store()` swaps the pointer). Every request handler loads the current cache at the start of the request and works with that snapshot — even if a config change swaps the cache mid-request, the handler finishes with the old cache, and the `Arc` reference count ensures it stays alive.
+`ArcSwap` gives you lock-free reads (`load()` returns an `Arc` snapshot) and atomic writes (`store()` swaps the pointer). Every request handler loads the current cache at the start of the request and works with that snapshot. Even if a config change swaps the cache mid-request, the handler finishes with the old cache, and the `Arc` reference count keeps it alive.
 
-For TTL changes, I went further: the default TTL is stored as an `AtomicU64` inside the `CacheLayer`, so TTL updates don't require any cache rebuild at all. The new TTL applies instantly to future insertions while existing entries keep their original TTL.
+For TTL changes, the default TTL is stored as an `AtomicU64` inside the `CacheLayer`, so TTL updates don't require any cache rebuild at all. The new TTL applies instantly to future insertions while existing entries keep their original TTL.
 
-For eviction policy changes (e.g., switching from SIEVE to LRU), there's no choice but to rebuild the cache — the internal data structures are fundamentally different. Colander builds the new cache, atomically swaps it in via `ArcSwap::store`, and the old cache is dropped when the last request holding a reference finishes.
+For eviction policy changes (switching from SIEVE to LRU, for example), there's no choice but to rebuild the cache since the internal data structures are fundamentally different. Colander builds the new cache, atomically swaps it in via `ArcSwap::store`, and the old cache gets dropped when the last request holding a reference finishes.
 
-One deliberate design constraint: **capacity changes are rejected at runtime**. If a running cache is full at 1M entries and you reduce capacity to 500K, the next request would synchronously evict 500K items in a tight loop, stalling the event loop and spiking P99 latency. Colander logs a warning and ignores the change. Restart to resize.
+One deliberate design constraint: **capacity changes are rejected at runtime.** If a running cache is full at 1M entries and you reduce capacity to 500K, the next request would synchronously evict 500K items in a tight loop, stalling the event loop and spiking P99 latency. Colander logs a warning and ignores the change. Restart to resize.
 
 ## Speaking Redis: The RESP2 Interface
 
-One of the features I'm most proud of is the RESP2 (Redis Serialization Protocol) server. Colander listens on port 6379 and speaks the same wire protocol as Redis. You can point any Redis client — `redis-cli`, `redis-py`, Jedis, `ioredis` — at Colander and use it as a drop-in cache:
+One of the features I'm most proud of is the RESP2 (Redis Serialization Protocol) server. Colander listens on port 6379 and speaks the same wire protocol as Redis. You can point any Redis client at Colander and use it as a drop-in cache:
 
 ```bash
 $ redis-cli -p 6379
@@ -166,35 +157,35 @@ OK
 (integer) 1
 ```
 
-The RESP server shares the same in-memory cache as the HTTP proxy. A `SET` via Redis is immediately visible to HTTP `GET` responses, and vice versa. This means you can use Colander as both an HTTP caching layer *and* a general-purpose key-value cache, backed by the same SIEVE eviction policy, with a single deployment.
+The RESP server shares the same in-memory cache as the HTTP proxy. A `SET` via Redis is immediately visible to HTTP `GET` responses, and vice versa. You can use Colander as both an HTTP caching layer *and* a general-purpose key-value cache, backed by the same SIEVE eviction policy, with a single deployment.
 
-Implementing RESP2 was straightforward with the `redis-protocol` crate for frame encoding/decoding. The interesting part was the command dispatch — mapping Redis commands to cache operations:
+Implementing RESP2 was straightforward with the `redis-protocol` crate for frame encoding/decoding. The interesting part was the command dispatch, mapping Redis commands to cache operations:
 
-- `GET` → `cache.get(key)`, return the body bytes
-- `SET key value [EX seconds]` → `cache.insert_raw(key, value, ttl)`
-- `DEL key [key ...]` → loop `cache.remove(key)`, return count
-- `TTL key` → `cache.ttl_remaining(key)`, return seconds or `-2`
-- `EXPIRE` → returns `0` (TTL is immutable after insertion — a design choice for simplicity and consistency)
+- `GET` maps to `cache.get(key)`, returns the body bytes
+- `SET key value [EX seconds]` maps to `cache.insert_raw(key, value, ttl)`
+- `DEL key [key ...]` loops `cache.remove(key)`, returns the count
+- `TTL key` maps to `cache.ttl_remaining(key)`, returns seconds or `-2`
+- `EXPIRE` returns `0` (TTL is immutable after insertion, a design choice for simplicity)
 
 The connection handler is a simple async loop: read RESP frames from a `BufReader`, dispatch to the command handler, write the response frame back. Each client gets its own tokio task.
 
 ## Production Hardening
 
-Beyond the core cache and protocols, I invested significant effort in making Colander production-ready:
+Beyond the core cache and protocols, I put a lot of effort into making Colander production-ready:
 
 **Graceful shutdown.** On `SIGINT` or `SIGTERM`, Colander stops accepting new connections on all three servers (HTTP proxy, metrics, RESP), drains in-flight requests to completion, then exits cleanly. Zero dropped requests during rolling deployments.
 
-**Prometheus metrics.** `GET /metrics` on the metrics port returns standard Prometheus text format with counters for cache hits/misses, gauges for current cache size and evictions, and histograms for request and upstream latency — all tagged by eviction policy.
+**Prometheus metrics.** `GET /metrics` on the metrics port returns standard Prometheus text format with counters for cache hits/misses, gauges for current cache size and evictions, and histograms for request and upstream latency, all tagged by eviction policy.
 
-**Dual-cache comparison mode.** Every request in "demo" mode hits both SIEVE (primary) and LRU (shadow). Responses are served from SIEVE; LRU processes the same traffic in the background for an apples-to-apples comparison. The React dashboard streams both hit rates over WebSocket at 500ms intervals, so you can watch SIEVE outperform LRU in real time with a Zipfian load generator whose skewness parameter is adjustable via a slider.
+**Dual-cache comparison mode.** Every request in "demo" mode hits both SIEVE (primary) and LRU (shadow). Responses are served from SIEVE; LRU processes the same traffic in the background for an apples-to-apples comparison. The React dashboard streams both hit rates over WebSocket at 500ms intervals so you can watch SIEVE outperform LRU in real time. There's a Zipfian load generator with an adjustable skewness slider.
 
-**Lazy TTL expiration.** Expired entries are not proactively garbage-collected — no background timer threads, no scan tasks. On `get()`, if the TTL has elapsed, it's treated as a miss and the entry is removed. During eviction sweeps, the SIEVE hand evicts expired entries regardless of their visited bit. This keeps the hot path fast and avoids the complexity of background cleanup.
+**Lazy TTL expiration.** Expired entries are not proactively garbage-collected. No background timer threads, no scan tasks. On `get()`, if the TTL has elapsed, it's treated as a miss and the entry is removed. During eviction sweeps, the SIEVE hand evicts expired entries regardless of their visited bit. This keeps the hot path fast and avoids the complexity of background cleanup.
 
 ## What I Learned
 
-**Rust's ownership model forces better architecture.** The arena allocation pattern wasn't my first choice — I wanted a traditional pointer-based linked list. Rust's borrow checker said no. The alternative I was forced into is arguably better: contiguous memory, no `unsafe`, O(1) slot reuse, and the compiler guarantees no use-after-free.
+**Rust's ownership model forces better architecture.** The arena allocation pattern wasn't my first choice. I wanted a traditional pointer-based linked list. Rust's borrow checker said no. The alternative I was forced into is arguably better: contiguous memory, no `unsafe`, O(1) slot reuse, and the compiler guarantees no use-after-free.
 
-**Lock granularity matters more than lock speed.** Switching from `std::sync::RwLock` to `parking_lot::RwLock` gave a marginal improvement. Switching from 1 lock to 64 shards gave an order-of-magnitude improvement. The lesson: reduce contention by reducing the critical section, not by making the lock faster.
+**Lock granularity matters more than lock speed.** Switching from `std::sync::RwLock` to `parking_lot::RwLock` gave a marginal improvement. Switching from 1 lock to 64 shards gave an order-of-magnitude improvement. Reduce contention by reducing the critical section, not by making the lock faster.
 
 **The simplest algorithm can be the best one.** SIEVE is simpler than LRU. No move-to-front, no frequency counters, no ghost queues, no tuning parameters. Just a visited bit and a scanning hand. And it beats algorithms with 10x the complexity (ARC, LIRS, S3-FIFO) on real-world web traces. Complexity is not a proxy for quality.
 
