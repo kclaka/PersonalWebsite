@@ -1,7 +1,5 @@
 ---
 import '../styles/global.css';
-import ParticleBackground from '../components/ParticleBackground';
-import ThemeToggle from '../components/ThemeToggle';
 
 interface Props {
 	title: string;
@@ -11,9 +9,9 @@ interface Props {
 	canonicalURL?: string;
 }
 
-const { 
-	title, 
-	description = "Kenny Igbechi - Software Engineer with expertise in building scalable applications and distributed systems",
+const {
+	title,
+	description = "Kenny Igbechi - Senior software engineer building data platforms and distributed systems",
 	image = '/social-image.png',
 	type = 'website',
 	canonicalURL = Astro.url.href
@@ -29,37 +27,31 @@ const socialImageURL = new URL(image, Astro.url.origin).href;
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<meta name="generator" content={Astro.generator} />
-		
+
 		<!-- Primary Meta Tags -->
 		<title>{title}</title>
 		<meta name="title" content={title} />
 		<meta name="description" content={description} />
 		<link rel="canonical" href={canonicalURL} />
-		
+
 		<!-- Open Graph / Facebook -->
 		<meta property="og:type" content={type} />
 		<meta property="og:url" content={Astro.url.href} />
 		<meta property="og:title" content={title} />
 		<meta property="og:description" content={description} />
 		<meta property="og:image" content={socialImageURL} />
-		
+
 		<!-- Twitter -->
 		<meta property="twitter:card" content="summary_large_image" />
 		<meta property="twitter:url" content={Astro.url.href} />
 		<meta property="twitter:title" content={title} />
 		<meta property="twitter:description" content={description} />
 		<meta property="twitter:image" content={socialImageURL} />
-		
-		<!-- Fonts -->
-		<link rel="preconnect" href="https://fonts.googleapis.com">
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
 		<!-- Additional SEO Tags -->
 		<meta name="author" content="Kenny Igbechi" />
 		<meta name="robots" content="index, follow" />
-		<meta name="keywords" content="Kenny Igbechi, Software Engineer, Full Stack Developer, Distributed Systems, Tech Lead, Engineering" />
-		
+
 		<!-- JSON-LD for Rich Snippets -->
 		<script type="application/ld+json" set:html={JSON.stringify({
 			"@context": "https://schema.org",
@@ -73,51 +65,25 @@ const socialImageURL = new URL(image, Astro.url.origin).href;
 			"jobTitle": "Senior Software Engineer",
 			"description": description,
 			"image": socialImageURL,
-			"email": "hello@kennyigbechi.com",
-			"alumniOf": {
-				"@type": "CollegeOrUniversity",
-				"name": "University of Houston"
-			},
-			"knowsAbout": [
-				"Cloud Computing",
-				"Azure",
-				"AWS",
-				"Software Engineering",
-				"Distributed Systems",
-				"Full Stack Development"
-			]
+			"email": "hello@kennyigbechi.com"
 		})} />
-		
+
 		<!-- Theme Script -->
 		<script is:inline>
 			const theme = localStorage.getItem('theme') || 'dark';
 			document.documentElement.classList[theme === 'dark' ? 'add' : 'remove']('dark');
 		</script>
 	</head>
-	<body class="bg-zinc-50 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-50">
-		<ParticleBackground client:load />
-		<ThemeToggle client:load />
-		<div class="min-h-screen backdrop-blur-[2px]">
+	<body class="bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+		<div class="min-h-screen">
 			<slot />
 		</div>
 	</body>
 </html>
 
 <style is:global>
-	:root {
-		--accent: 136, 58, 234;
-		--accent-light: 224, 204, 250;
-		--accent-dark: 49, 10, 101;
-		--accent-gradient: linear-gradient(
-			45deg,
-			rgb(var(--accent)),
-			rgb(var(--accent-light)) 30%,
-			white 60%
-		);
-	}
-
 	html {
-		font-family: 'Inter', system-ui, sans-serif;
+		font-family: system-ui, -apple-system, sans-serif;
 		scroll-behavior: smooth;
 	}
 
@@ -128,6 +94,6 @@ const socialImageURL = new URL(image, Astro.url.origin).href;
 	}
 
 	code {
-		font-family: 'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace;
+		font-family: ui-monospace, Menlo, Consolas, monospace;
 	}
 </style>
