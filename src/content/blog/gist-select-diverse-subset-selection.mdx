@@ -7,7 +7,7 @@ tags: ['python', 'algorithms', 'machine-learning', 'optimization']
 
 There's a problem that comes up constantly in machine learning and data engineering that doesn't get talked about enough: **how do you pick the right subset of your data?**
 
-Not randomly. Not just the "best" items. But a subset that's both high-quality *and* diverse — where every selected item earns its spot, and no two items are redundant.
+Not randomly. Not just the "best" items. But a subset that's both high-quality *and* diverse, where every selected item earns its spot, and no two items are redundant.
 
 I recently came across a paper from Google Research that was published at NeurIPS 2025 that tackles this exact problem. It's called **GIST: Greedy Independent Set Thresholding for Max-Min Diversification with Submodular Utility**. The algorithm is elegant, has provable guarantees, and the math is beautiful. So I decided to implement it as a production-grade Python package.
 
@@ -19,18 +19,18 @@ Here's what the problem looks like, how the algorithm works, and what I built.
 
 Imagine you're training an image classifier and you can only afford to label 50,000 images out of 1.3 million. Which ones do you pick?
 
-The naive answer is: pick the 50,000 most "useful" ones — maybe the ones your current model is most uncertain about. But here's the catch. If your model is confused about a certain breed of dog, it might be uncertain about *thousands* of nearly identical dog photos. Picking all of them gives you 50,000 labels but terrible coverage of the rest of your data.
+The naive answer is: pick the 50,000 most "useful" ones, maybe the ones your current model is most uncertain about. But here's the catch. If your model is confused about a certain breed of dog, it might be uncertain about *thousands* of nearly identical dog photos. Picking all of them gives you 50,000 labels but terrible coverage of the rest of your data.
 
 What you actually want is a subset that's:
-1. **High utility** — each item is individually valuable (uncertain, informative, high-weight, etc.)
-2. **Diverse** — the items are spread out, not clustered together
+1. **High utility**: each item is individually valuable (uncertain, informative, high-weight, etc.)
+2. **Diverse**: the items are spread out, not clustered together
 
 This tension between utility and diversity shows up everywhere:
 - **Data sampling** for model training
-- **Feature selection** — picking relevant but non-redundant features
-- **Document summarisation** — covering many topics without repetition
-- **Search result diversification** — showing varied results, not ten copies of the same page
-- **Recommendation systems** — surfacing a mix, not just variations of one item
+- **Feature selection**: picking relevant but non-redundant features
+- **Document summarisation**: covering many topics without repetition
+- **Search result diversification**: showing varied results, not ten copies of the same page
+- **Recommendation systems**: surfacing a mix, not just variations of one item
 
 The question is: can we formalize this trade-off and optimize it efficiently?
 
@@ -48,7 +48,7 @@ f(S) = g(S) + λ · div(S)
 
 Let's unpack each piece.
 
-### g(S) — The Utility Function
+### g(S): The Utility Function
 
 This measures how "good" your selected set is. It's a **monotone submodular** function, which sounds intimidating but is actually a natural concept.
 
@@ -58,9 +58,9 @@ This measures how "good" your selected set is. It's a **monotone submodular** fu
 
 The classic example is a **coverage function**: each item "covers" some set of elements (topics, regions, concepts), and `g(S)` counts how many distinct elements are covered. The first item covers a bunch. The second covers some new ones. Eventually you're mostly covering things you've already got.
 
-A simpler case is a **linear utility**: `g(S) = Σ weights[i]` for `i` in `S`. Each item has an individual score, and you just add them up. No diminishing returns here — it's a special case of submodular that's even easier to work with.
+A simpler case is a **linear utility**: `g(S) = Σ weights[i]` for `i` in `S`. Each item has an individual score, and you just add them up. No diminishing returns here; it's a special case of submodular that's even easier to work with.
 
-### div(S) — The Diversity Measure
+### div(S): The Diversity Measure
 
 This is the **max-min diversity**: the *minimum* pairwise distance in your selected set.
 
@@ -70,9 +70,9 @@ div(S) = min distance(u, v) for all pairs u, v in S
 
 Why the minimum? Because it acts as a guarantee. If `div(S) = 5`, it means *every* pair of selected points is at least distance 5 apart. No clustering. No redundancy. Your selected set is spread out with a hard floor on how close any two items can be.
 
-This is different from "max-sum diversity" (which sums all pairwise distances). Max-min is stricter — it doesn't let a few well-spread pairs compensate for a tight cluster elsewhere.
+This is different from "max-sum diversity" (which sums all pairwise distances). Max-min is stricter. It doesn't let a few well-spread pairs compensate for a tight cluster elsewhere.
 
-### λ — The Trade-Off Knob
+### λ: The Trade-Off Knob
 
 Lambda (λ) controls how much you care about diversity versus utility. Setting `λ = 0` gives you pure greedy utility maximization. Cranking it up pushes the algorithm toward maximally spread-out selections, even if individual items aren't the highest-scoring.
 
@@ -82,7 +82,7 @@ Lambda (λ) controls how much you care about diversity versus utility. Setting `
 
 Here's what makes MDMS tricky: **the objective `f(S)` is neither submodular nor monotone.**
 
-The `g(S)` part is submodular and monotone — adding items helps. But `div(S)` is *monotone decreasing* — adding items can only decrease the minimum pairwise distance (or keep it the same). The more points you cram in, the closer some pair will inevitably be.
+The `g(S)` part is submodular and monotone, so adding items helps. But `div(S)` is *monotone decreasing*: adding items can only decrease the minimum pairwise distance (or keep it the same). The more points you cram in, the closer some pair will inevitably be.
 
 This means you can't just throw standard submodular maximization at it. In fact, the paper proves that the standard greedy algorithm (pick the item with the highest marginal gain each step) **has no constant-factor approximation guarantee** for this problem. Its performance ratio can go to zero as *k* grows. The greedy picks a couple of well-spaced high-value items, then stops because every additional item hurts diversity more than it helps utility.
 
@@ -98,7 +98,7 @@ Instead of trying to optimize utility and diversity simultaneously, GIST **decou
 
 For a given distance threshold *d*, define the **intersection graph**: two points are "neighbors" if they're within distance *d* of each other. An **independent set** of this graph is a set of points where every pair is at distance ≥ *d*.
 
-So if you find an independent set, you get `div(S) ≥ d` for free. The diversity is handled by the graph structure — you just need to find the *best* independent set (the one with the highest submodular utility).
+So if you find an independent set, you get `div(S) ≥ d` for free. The diversity is handled by the graph structure, so you just need to find the *best* independent set (the one with the highest submodular utility).
 
 That's what `GreedyIndependentSet` does: it greedily builds a maximal independent set by repeatedly picking the active point with the highest marginal utility gain, then eliminating all points within distance *d* of it. Think of it as the classic greedy algorithm, but with a "no items too close together" constraint enforced at each step.
 
@@ -110,13 +110,13 @@ It constructs a geometric sequence of thresholds from near-zero up to the datase
 
 The full algorithm also checks two baselines:
 1. **Pure greedy** (threshold *d* = 0, no diversity constraint)
-2. **The diametrical pair** (the two farthest points — maximum diversity)
+2. **The diametrical pair** (the two farthest points, maximizing diversity)
 
 The best solution across all candidates wins.
 
 ### The Approximation Guarantee
 
-Here's the payoff: GIST achieves a **(1/2 - ε)-approximation** for general monotone submodular utilities. For the special case of linear utilities, it achieves **(2/3 - ε)** — and the paper proves this is *tight*. No polynomial-time algorithm can do better than 2/3 unless P = NP.
+Here's the payoff: GIST achieves a **(1/2 - ε)-approximation** for general monotone submodular utilities. For the special case of linear utilities, it achieves **(2/3 - ε)**, and the paper proves this is *tight*. No polynomial-time algorithm can do better than 2/3 unless P = NP.
 
 So GIST is essentially optimal for linear utilities.
 
@@ -134,13 +134,13 @@ The algorithm looks simple on paper, but making it fast at scale required carefu
 
 For Euclidean distance, I use the algebraic identity `||a - b||² = ||a||² + ||b||² - 2(a · b)`. By precomputing the squared norms once, each step reduces to a single BLAS matrix-vector multiplication (the dot product) plus cheap vector arithmetic. No temporary (n × d) arrays, no memory bandwidth waste. The hot path is a single highly-optimized BLAS GEMV call.
 
-**CELF (Lazy Greedy) acceleration.** The naive approach evaluates the marginal gain of *every* candidate at *every* step — that's O(nk) oracle calls per threshold. For a coverage function at 2 million points, this would take hours.
+**CELF (Lazy Greedy) acceleration.** The naive approach evaluates the marginal gain of *every* candidate at *every* step, which is O(nk) oracle calls per threshold. For a coverage function at 2 million points, this would take hours.
 
 CELF exploits submodularity's diminishing returns property. It maintains a priority queue of marginal gains. Since gains can only shrink as the selected set grows, you only need to re-evaluate the top candidate. If its refreshed gain is still higher than the next candidate's stale gain, you can select it immediately without checking anyone else. In practice, this cuts oracle calls by orders of magnitude.
 
-The subtle part was making CELF work with the distance elimination. When a point is eliminated (too close to a selected point), it might still be in the priority queue. I use lazy deletion — eliminated entries are simply skipped when they're popped. The correctness argument still holds because submodularity guarantees stale gains are upper bounds.
+The subtle part was making CELF work with the distance elimination. When a point is eliminated (too close to a selected point), it might still be in the priority queue. I use lazy deletion: eliminated entries are simply skipped when they're popped. The correctness argument still holds because submodularity guarantees stale gains are upper bounds.
 
-**Multi-start diameter estimation.** GIST needs the dataset diameter (maximum pairwise distance) to construct its threshold set. Computing this exactly is O(n²) — infeasible at 2 million points. I use a multi-start double-scan heuristic: pick a random point, find the farthest point from it, then find the farthest from that. Repeat from 5 random starts and take the maximum. It's 10 distance computations over the full dataset (~0.4 seconds) and practically guarantees a tight estimate.
+**Multi-start diameter estimation.** GIST needs the dataset diameter (maximum pairwise distance) to construct its threshold set. Computing this exactly is O(n²), which is infeasible at 2 million points. I use a multi-start double-scan heuristic: pick a random point, find the farthest point from it, then find the farthest from that. Repeat from 5 random starts and take the maximum. It's 10 distance computations over the full dataset (~0.4 seconds) and practically guarantees a tight estimate.
 
 ### The API
 
@@ -173,9 +173,9 @@ The whole package is about 400 lines of code across three source files. No bloat
 
 A few things I found satisfying when testing:
 
-**The coverage function example.** I created 500 synthetic "documents," each covering a random subset of 200 "topics." GIST selected just 20 documents and covered all 200 topics — while also ensuring the selected documents were spatially spread out. That's the algorithm doing exactly what it promises.
+**The coverage function example.** I created 500 synthetic "documents," each covering a random subset of 200 "topics." GIST selected just 20 documents and covered all 200 topics, while also ensuring the selected documents were spatially spread out. That's the algorithm doing exactly what it promises.
 
-**The trade-off is real and tunable.** Sweeping λ from 0 to 10 shows a clean transition. At λ = 0, you get pure utility (top-k by weight). At λ = 10, the algorithm picks just 2 points — the farthest pair — because diversity dominates everything. In between, you get a smooth trade-off. It's a single knob that does what you'd expect.
+**The trade-off is real and tunable.** Sweeping λ from 0 to 10 shows a clean transition. At λ = 0, you get pure utility (top-k by weight). At λ = 10, the algorithm picks just 2 points (the farthest pair), because diversity dominates everything. In between, you get a smooth trade-off. It's a single knob that does what you'd expect.
 
 **The correctness checks hold.** Every test verifies that `f(S) = g(S) + λ · div(S)` exactly, that all selected pairs have distance ≥ `div(S)`, and that CELF produces identical results to brute-force greedy on small instances.
 
@@ -186,11 +186,11 @@ A few things I found satisfying when testing:
 If you're in any situation where you need to select a subset and you care about both quality and coverage, gist-select is worth a look.
 
 Concrete use cases:
-- **Active learning** — select the most informative *and* diverse batch to label next
-- **Data pruning** — find a small, representative training set
-- **Feature selection** — pick relevant but non-redundant features
-- **Search & recommendations** — diversify results beyond relevance ranking
-- **Experiment design** — choose test configurations that cover the parameter space
+- **Active learning**: select the most informative *and* diverse batch to label next
+- **Data pruning**: find a small, representative training set
+- **Feature selection**: pick relevant but non-redundant features
+- **Search & recommendations**: diversify results beyond relevance ranking
+- **Experiment design**: choose test configurations that cover the parameter space
 
 The package is [on GitHub](https://github.com/kclaka/gist-select) and installable via pip. It's open source under MIT.
 
@@ -200,9 +200,9 @@ The package is [on GitHub](https://github.com/kclaka/gist-select) and installabl
 
 Building this was a great exercise in translating theory to practice. A few takeaways:
 
-**Read the proofs, not just the algorithm.** The proof of Lemma 3.2 (the bicriteria approximation) is what made the whole algorithm click for me. Understanding *why* the greedy independent set gives you half the optimal utility at double the threshold — that's the key insight. Without understanding it, GIST looks like "try a bunch of thresholds and pick the best." With the proof, you see it's a carefully designed approximation scheme.
+**Read the proofs, not just the algorithm.** The proof of Lemma 3.2 (the bicriteria approximation) is what made the whole algorithm click for me. Understanding *why* the greedy independent set gives you half the optimal utility at double the threshold. That's the key insight. Without understanding it, GIST looks like "try a bunch of thresholds and pick the best." With the proof, you see it's a carefully designed approximation scheme.
 
-**The standard greedy failing was surprising.** I'd assumed that greedy-with-marginal-gains would at least be decent. The paper's counterexample — where greedy's approximation ratio goes to zero — is humbling. The diversity term's non-monotonicity genuinely breaks the standard approach.
+**The standard greedy failing was surprising.** I'd assumed that greedy-with-marginal-gains would at least be decent. The paper's counterexample, where greedy's approximation ratio goes to zero, is humbling. The diversity term's non-monotonicity genuinely breaks the standard approach.
 
 **Optimize the hot path, not everything.** 95% of the runtime is in one operation: computing distances from one point to many. Making that a single BLAS call (via the norm identity trick) was worth more than any other optimization combined.
 
