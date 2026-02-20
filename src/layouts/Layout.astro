@@ -7,6 +7,8 @@ interface Props {
 	image?: string;
 	type?: string;
 	canonicalURL?: string;
+	publishedTime?: Date;
+	modifiedTime?: Date;
 }
 
 const {
@@ -14,7 +16,9 @@ const {
 	description = "Kenny Igbechi - Senior software engineer building data platforms and distributed systems",
 	image = '/social-image.png',
 	type = 'website',
-	canonicalURL = Astro.url.href
+	canonicalURL = Astro.url.href,
+	publishedTime,
+	modifiedTime,
 } = Astro.props;
 
 const socialImageURL = new URL(image, Astro.url.origin).href;
@@ -27,6 +31,9 @@ const socialImageURL = new URL(image, Astro.url.origin).href;
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<meta name="generator" content={Astro.generator} />
+
+		<!-- RSS -->
+		<link rel="alternate" type="application/rss+xml" title="Kenny Igbechi" href="/rss.xml" />
 
 		<!-- Primary Meta Tags -->
 		<title>{title}</title>
@@ -51,22 +58,42 @@ const socialImageURL = new URL(image, Astro.url.origin).href;
 		<!-- Additional SEO Tags -->
 		<meta name="author" content="Kenny Igbechi" />
 		<meta name="robots" content="index, follow" />
+		{publishedTime && <meta property="article:published_time" content={publishedTime.toISOString()} />}
+		{modifiedTime && <meta property="article:modified_time" content={modifiedTime.toISOString()} />}
 
 		<!-- JSON-LD for Rich Snippets -->
-		<script type="application/ld+json" set:html={JSON.stringify({
-			"@context": "https://schema.org",
-			"@type": "Person",
-			"name": "Kenny Igbechi",
-			"url": Astro.url.origin,
-			"sameAs": [
-				"https://github.com/kclaka",
-				"https://x.com/kennyclaka"
-			],
-			"jobTitle": "Senior Software Engineer",
-			"description": description,
-			"image": socialImageURL,
-			"email": "hello@kennyigbechi.com"
-		})} />
+		{type === 'article' ? (
+			<script type="application/ld+json" set:html={JSON.stringify({
+				"@context": "https://schema.org",
+				"@type": "BlogPosting",
+				"headline": title,
+				"description": description,
+				"image": socialImageURL,
+				"url": canonicalURL,
+				"datePublished": publishedTime?.toISOString(),
+				...(modifiedTime && { "dateModified": modifiedTime.toISOString() }),
+				"author": {
+					"@type": "Person",
+					"name": "Kenny Igbechi",
+					"url": Astro.url.origin
+				}
+			})} />
+		) : (
+			<script type="application/ld+json" set:html={JSON.stringify({
+				"@context": "https://schema.org",
+				"@type": "Person",
+				"name": "Kenny Igbechi",
+				"url": Astro.url.origin,
+				"sameAs": [
+					"https://github.com/kclaka",
+					"https://x.com/kennyclaka"
+				],
+				"jobTitle": "Senior Software Engineer",
+				"description": description,
+				"image": socialImageURL,
+				"email": "hello@kennyigbechi.com"
+			})} />
+		)}
 
 		<!-- Theme Script -->
 		<script is:inline>
